@@ -106,7 +106,7 @@ cost = tf.reduce_mean(soft_max_with_cross_entrophy)
 
 # make the training function based on the cost
 
-learning_rate = .0025
+learning_rate = .06
 
 training_operation = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
 
@@ -136,8 +136,14 @@ with tf.Session() as sess:
             # run the training model with the feed dict from the data
             sess.run(training_operation, feed_dict=feed_dict)
 
-        print(run, np.mean(np.argmax(training_set_labels, axis=1) == sess.run(
-            prediction_operation, feed_dict={X: training_set_x, Y: training_set_labels})))
+        accuracy_of_run = np.mean(
+            np.argmax(training_set_labels, axis=1) == sess.run(prediction_operation, feed_dict={X: training_set_x, Y: training_set_labels})
+        )
+        print(run, accuracy_of_run)
+
+        # Early Termination
+        if accuracy_of_run > .98:
+            break
 
 
     numbers = np.arange(1, 101)
@@ -154,6 +160,10 @@ with tf.Session() as sess:
 
     accuracy = sum(is_correct) / len(is_correct)
     print("Accuracy {}".format(accuracy))
+
+    proto = "{:^8}" * 10
+    for i in range(10):
+        print(proto.format(*[output[i * 10 + j] for j in range(10)]))
 
 
 
