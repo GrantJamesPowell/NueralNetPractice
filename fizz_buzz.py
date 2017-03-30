@@ -4,7 +4,7 @@ import numpy as np
 # helper functions to encode the data replace as needed
 
 # the number of digits our binary representation will have
-number_of_digits_in_binary_representation = 10
+number_of_digits_in_binary_representation = 12
 
 def binary_encode(number, num_digits):
     # bit shift the number to the right by a certain number of digits and then see if the digit you moved is a one
@@ -53,7 +53,7 @@ def input_data_encode(number):
 
 def get_training_data_iterator():
     # return an iterator to the training data
-    return range(101, 2 ** 10)
+    return range(101, 2 ** number_of_digits_in_binary_representation)
 
 def get_training_data_width():
     return input_data_encode(get_training_data_iterator()[0]).size
@@ -101,15 +101,17 @@ predict_y_given_x_model = make_model(X, weights_hidden, weights_output)
 
 # make the cost function
 
-soft_max_with_cross_entrophy = tf.nn.softmax_cross_entropy_with_logits(predict_y_given_x_model, Y)
-cost = tf.reduce_mean(soft_max_with_cross_entrophy)
+soft_max_with_cross_entropy = tf.nn.softmax_cross_entropy_with_logits(predict_y_given_x_model, Y)
+cost = tf.reduce_mean(soft_max_with_cross_entropy)
 
 # make the training function based on the cost
 
 learning_rate = .06
 
+# the training operation
 training_operation = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
 
+# the predition is just taking the greatest value from each of the sets
 prediction_operation = tf.argmax(predict_y_given_x_model, 1)
 
 
@@ -121,9 +123,12 @@ num_runs = 3500
 with tf.Session() as sess:
     tf.initialize_all_variables().run()
 
+    # we will rerun the data until our accuracy is above .995
     for run in range(num_runs):
-        #  generate a permutatation of equal length to training set
+
+        #  generate a permutation of equal length to training set
         permutation = np.random.permutation(range(len(training_set_x)))
+
         #  apply the shuffle
         training_set_x = training_set_x[permutation]
         training_set_labels = training_set_labels[permutation]
@@ -136,35 +141,33 @@ with tf.Session() as sess:
             # run the training model with the feed dict from the data
             sess.run(training_operation, feed_dict=feed_dict)
 
+        # Every iteration print out the run number and the accuracy of
         accuracy_of_run = np.mean(
-            np.argmax(training_set_labels, axis=1) == sess.run(prediction_operation, feed_dict={X: training_set_x, Y: training_set_labels})
+            np.argmax(training_set_labels, axis=1) ==sess.run(prediction_operation, feed_dict={X:training_set_x,
+                                                                                               Y: training_set_labels})
         )
         print(run, accuracy_of_run)
 
         # Early Termination
-        if accuracy_of_run > .98:
+        if accuracy_of_run > .995:
             break
 
-
+    # Run our validation data
     numbers = np.arange(1, 101)
     final_x = np.transpose(binary_encode(numbers, number_of_digits_in_binary_representation))
     predicted_y = sess.run(prediction_operation, feed_dict={X: final_x})
     print(predicted_y)
     output = [fizz_buzz_predict(i, predicted_y[i - 1]) for i in numbers]
-    print(output)
-    print()
-    print()
-    is_correct = [output[i - 1] == normal_fizz_buzz(i) for i in numbers]
-    print(is_correct)
-    print()
 
-    accuracy = sum(is_correct) / len(is_correct)
-    print("Accuracy {}".format(accuracy))
-
+    # Print out the Answer
     proto = "{:^8}" * 10
     for i in range(10):
         print(proto.format(*[output[i * 10 + j] for j in range(10)]))
 
+    # Calculate the accuracy of the run
+    is_correct = [output[i - 1] == normal_fizz_buzz(i) for i in numbers]
+    accuracy = sum(is_correct) / len(is_correct)
+    print("Accuracy {}".format(accuracy))
 
 
 
