@@ -64,7 +64,7 @@ data_labels = data_labels[perm]
 regular_names = regular_names[perm]
 
 # partition the data into training, and testing
-partition = int(len(total_data) * .9)  # 90% training, 10% testing
+partition = int(len(total_data) * .85)  # 85% training, 15% testing
 
 X, testing_data = total_data[:partition], total_data[partition:]
 Y, testing_labels = data_labels[:partition], data_labels[partition:]
@@ -74,13 +74,13 @@ reg_names_training, reg_names_testing = regular_names[:partition], regular_names
 
 
 model = Sequential()
-model.add(Conv2D(32, (7,7), input_shape=X[0].shape, activation='relu'))
-model.add(MaxPooling2D(pool_size=(2,2)))
-model.add(Dropout(.4))
-# flatten it so we can feed it to a regular multiple percipticon layer
+model.add(Conv2D(30, (5, 5), input_shape=X[0].shape, activation='relu'))
+model.add(Conv2D(15, (3, 3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Dropout(.3))
 model.add(Flatten())
-# regular nueral net part
 model.add(Dense(128, activation='relu'))
+model.add(Dense(50, activation='relu'))
 model.add(Dense(num_classes, activation='softmax'))
 model.summary()
 
