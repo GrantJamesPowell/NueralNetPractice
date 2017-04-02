@@ -1,30 +1,41 @@
 from keras.optimizers import SGD
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
+from keras.layers import Dense, Dropout
 from keras.utils.np_utils import to_categorical
 from keras import metrics
 import numpy as np
-
+from tqdm import tqdm
+from glob import glob
 
 import string as base_string
 
-# longest name to use
-input_width = 10
+input_width = 10  # longest name to use
 num_classes = 3
+letters = base_string.ascii_lowercase
 
 # load the data
-with open('data/boys_names.txt') as f:
-    boys_names = [x.strip().lower() for x in f.readlines() if len(x.strip()) <= input_width]
-    boys_names_set = set(boys_names)
 
-with open('data/girls_names.txt') as f:
-    girls_names = [x.strip().lower() for x in f.readlines() if len(x.strip()) <= input_width]
-    girls_names_set = set(girls_names)
+boys_names_set = set()
+girls_names_set = set()
+
+files = glob('./data/bignames/*.data')
+print('Loading Data into Memory')
+for filename in tqdm(files):
+    with open(filename, 'r') as f:
+        rows = [x.strip().split(',') for x in f.readlines() if x.strip().split(',')]
+        for row in rows:
+            gender, name = row[1], row[3].lower()
+            if len(name) > input_width or any(c not in letters for c in name):
+                continue
+            if gender == 'F':
+                girls_names_set.add(name)
+            if gender == 'M':
+                boys_names_set.add(name)
+print('Imported Data')
 
 all_names_set = boys_names_set | girls_names_set
 
 # encode the strings as pictures
-letters = base_string.ascii_lowercase
 
 
 def encode_string_as_array(string):
@@ -35,13 +46,17 @@ def encode_string_as_array(string):
 
     return arr
 
+
 # classify the names as an int, we need to use cargorical transformations to one hot encode these
 def classify_name(name):
     boy, girl, both = 0, 1, 2
     # O(1) inclusion tests FTW
-    if name in boys_names_set and name in girls_names_set: return both
-    if name in boys_names_set: return boy
-    if name in girls_names_set: return girl
+    if name in boys_names_set and name in girls_names_set:
+        return both
+    if name in boys_names_set:
+        return boy
+    if name in girls_names_set:
+        return girl
 
 
 total_data = np.array([encode_string_as_array(name) for name in sorted(all_names_set)])
@@ -83,7 +98,7 @@ model.add(Dense(num_classes, kernel_initializer='normal', activation='softmax'))
 
 model.summary()
 
-sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+sgd = SGD(lr=0.01)
 model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=[metrics.categorical_accuracy])
 
 model.fit(X, Y, epochs=150, batch_size=512, verbose=True, validation_data=(testing_data, testing_labels))
@@ -96,15 +111,19 @@ predictions = np.argmax(model.predict(testing_data), 1)
 
 # visualize
 
+
 class colors:
     ok = '\033[92m'
     fail = '\033[91m'
     close = '\033[0m'
 
 num_correct = 0
+correct_per_class = [0] * num_classes
+totals = [0] * num_classes
 proto = '|' + '{:^12}|' * 4
-print(proto.format('Name', 'Guess', 'Correct', 'Match?'))
 for i in range(len(testing_data)):
+    if i % 10 == 0:
+        print(proto.format('Name', 'Guess', 'Correct', 'Match?'))
     name = reg_names_testing[i]
     guess = ['boy', 'girl', 'both'][predictions[i]]
     answer = ['boy', 'girl', 'both'][classify_name(name)]
@@ -112,9 +131,11 @@ for i in range(len(testing_data)):
     col = colors.ok if match else colors.fail
     string = col + proto.format(name, guess, answer, match) + colors.close
     print(string)
+
     num_correct += match
+    correct_per_class[classify_name(name)] += match
+    totals[classify_name(name)] += 1
 
 print()
 per_correct = round(num_correct / len(testing_data), 2) * 100
 print("Correct on {} of {} ({}%)".format(num_correct, len(testing_data), per_correct))
-
