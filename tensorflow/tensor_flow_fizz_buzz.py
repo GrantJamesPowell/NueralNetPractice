@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
-# helper functions to encode the data replace as needed
+# helper functions to encode the data replace as needed, these have nothing really to do with the model
 
 # the number of digits our binary representation will have
 number_of_digits_in_binary_representation = 12
@@ -15,6 +15,7 @@ def binary_encode(number, num_digits):
 
 
 def fizz_buzz_encode(number):
+    # one hot encodings
     fizz_buzz = np.array([0,0,0,1])
     buzz =      np.array([0,0,1,0])
     fizz =      np.array([0,1,0,0])
@@ -44,8 +45,6 @@ def normal_fizz_buzz(number):
 # defining the encoding of the data to the model
 
 def input_data_encode(number):
-    # if you want to do binary encoding of the number uncomment this line
-    # number = np.array(number)
     number = binary_encode(number, number_of_digits_in_binary_representation)
     return number
 
@@ -58,7 +57,6 @@ def get_training_data_iterator():
 def get_training_data_width():
     return input_data_encode(get_training_data_iterator()[0]).size
 
-
 # label encoding
 
 def label_encode(number):
@@ -67,13 +65,10 @@ def label_encode(number):
 def get_label_encode_width():
     return label_encode(get_training_data_iterator()[0]).size
 
-
 # Create a training set
-# in this example I'm using the integer representation of the number
 
 training_set_x = np.array([input_data_encode(i) for i in get_training_data_iterator()])
 training_set_labels = np.array([label_encode(i) for i in get_training_data_iterator()])
-
 
 #initalize the weights
 
@@ -93,8 +88,8 @@ Y = tf.placeholder("float", [None, 4])
 
 def make_model(x_place_holder, hidden_weights, output_weights):
     first_hidden_logits = tf.matmul(x_place_holder, hidden_weights)
-    added_relu_layer = tf.nn.relu(first_hidden_logits)
-    added_output_layer = tf.matmul(added_relu_layer, output_weights)
+    added_relu_activation = tf.nn.relu(first_hidden_logits)
+    added_output_layer = tf.matmul(added_relu_activation, output_weights)
     return added_output_layer
 
 predict_y_given_x_model = make_model(X, weights_hidden, weights_output)
@@ -111,7 +106,7 @@ learning_rate = .06
 # the training operation
 training_operation = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
 
-# the predition is just taking the greatest value from each of the sets
+# the prediction is just taking the greatest value from each of the sets
 prediction_operation = tf.argmax(predict_y_given_x_model, 1)
 
 
@@ -152,7 +147,7 @@ with tf.Session() as sess:
         if accuracy_of_run > .995:
             break
 
-    # Run our validation data
+    # Run our testing data
     numbers = np.arange(1, 101)
     final_x = np.transpose(binary_encode(numbers, number_of_digits_in_binary_representation))
     predicted_y = sess.run(prediction_operation, feed_dict={X: final_x})
